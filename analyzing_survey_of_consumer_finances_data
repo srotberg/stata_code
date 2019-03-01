@@ -1,0 +1,187 @@
+
+clear
+set mem 700m
+
+cd "C:\Users\User\Google Drive\University\UofT\Third-Sixth year PhD\SCF - 1989-2013"
+
+use SCF2013.dta, replace
+
+*Gets the total wgts
+egen wgt_tot=sum(wgt)
+
+gen homeowners=wgt*hhouses
+
+egen population=sum(wgt)
+
+display "population=", population
+
+gen homeowners_with_mrthel=wgt*hmrthel
+
+egen total_homeowners=sum(homeowners)
+
+display "homeownership rate=", total_homeowners/population
+
+egen total_homeowners_with_mrthel=sum(homeowners_with_mrthel)
+
+display "Fraction of homeowners with mortgage=", total_homeowners_with_mrthel/total_homeowners
+
+*Gets the density of each household
+gen density=wgt/wgt_tot
+
+* Generates the value of houses weighted by the fraction of households in that category
+gen weighted_houses=density*houses
+
+egen tot_houses=sum(weighted_houses)
+
+* Generate the value of mortgages weighted by the fraction of households in that category
+gen weighted_mrthel=density*mrthel
+
+* Generates the nominal value of mortgages weighted by the fraction of households in that category
+gen weighted_nominal_mrthel=wgt*mrthel
+
+egen tot_mrthel=sum(weighted_mrthel)
+
+scalar tot_net_houses=tot_houses-tot_mrthel
+
+display tot_mrthel/tot_houses
+
+* Generate the value of net worth weighted by the fraction of households in that category
+gen weighted_networth=density*networth
+
+egen tot_networth=sum(weighted_networth)
+
+* Genereate the value of wage income weighted by the fraction of households in that category
+*gen weighted_wage_income=density*wage_income
+
+egen tot_wage_income=sum(weighted_wage_income)
+
+gen weighted_nominal_networth=wgt*networth
+
+egen tot_nominal_networth=sum(weighted_nominal_networth)
+
+display "Total nominal net wealth=", tot_nominal_networth
+
+gen fin_net_houses_networth=fin+houses-mrthel
+
+gen wgt_nom_fin_net_hous_networth=wgt*fin_net_houses_networth
+
+egen total_fin_net_houses_networth=sum(wgt_nom_fin_net_hous_networth)
+
+display "Total nominal net wealth (only financial wealth and housing wealth)=", total_fin_net_houses_networth
+
+gen net_prin_houses=houses-mrthel
+
+gen wgt_net_prin_houses=wgt*net_prin_houses
+
+*gen wgt_wage_income=wgt*wage_income
+
+egen tot_net_prin_houses=sum(wgt_net_prin_houses)
+
+display "Net prinicple housing wealth=", tot_net_prin_houses
+
+display tot_net_houses/tot_networth
+
+gen weighted_hhouses=hhouses*density
+
+egen homeownership_rate=sum(weighted_hhouses)
+
+display homeownership_rate
+
+mat x_perc=J(1,5,0)
+
+* These matrices are used to calculate data for different % of the wealth distribution
+matrix x_perc[1,1]=0.0001
+
+gsort -networth
+* gsort -wage_income
+
+local count=1
+
+while `count'<=1 {
+
+	local x=0
+	local j=1
+	gen cum_dist=0
+	gen net_wealth_of_top_x_perc=0
+	gen net_house_wealth_of_top_x_perc=0
+	*gen wage_income_of_top_x_perc=0 
+	gen mrthel_debt_of_top_x_perc=0
+	gen nom_mrthel_debt_of_top_x_perc=0
+	gen homeowner=0
+
+	while `x'<=x_perc[1,`count'] {
+
+		if `j'==1 {
+
+			* This is used to compute the total net worth of the top x perc of the wealth distribution
+			replace net_wealth_of_top_x_perc=weighted_nominal_networth[_n] if _n==`j'
+
+			* This is used to compute the total net worth in housing wealth of top x perc of the wealth distribution 
+			replace net_house_wealth_of_top_x_perc=wgt_net_prin_houses[_n] if _n==`j'
+
+			* This is used to compute the total wage income top x perc of the wage income distribution 
+			*replace wage_income_of_top_x_perc=wgt_wage_income[_n] if _n==`j'
+
+			* This is used to compute the total home secured debt of top x perc of the welath distribution
+			replace mrthel_debt_of_top_x_perc=weighted_mrthel[_n] if _n==`j' 
+
+			* Computes the nominal home secured debt
+			replace nom_mrthel_debt_of_top_x_perc=weighted_nominal_mrthel[_n] if _n==`j'
+			
+			* This is used to compute the homeownership rate of the topc x perc of the wealth distribution
+			replace homeowner=weighted_hhouses[_n] if _n==`j'
+
+			* Adds the densities
+			replace cum_dist=density[_n] if _n==`j'
+
+}
+		if `j'>1 {
+
+			* This is used to compute the total net worth of the top x perc of the wealth distribution
+			replace net_wealth_of_top_x_perc=net_wealth_of_top_x_perc[_n-1]+weighted_nominal_networth[_n] if _n==`j'
+
+			* This is used to compute the total net worth in housing wealth of top x perc of the wealth distribution 
+			replace net_house_wealth_of_top_x_perc=net_house_wealth_of_top_x_perc[_n-1]+wgt_net_prin_houses[_n] if _n==`j'
+
+			* This is used to compute the total net worth in housing wealth of top x perc of the wealth distribution 
+			*replace wage_income_of_top_x_perc=wgt_wage_income[_n-1]+wgt_wage_income[_n] if _n==`j'
+
+			* This is used to compute the total home secured debt of top x perc of the welath distribution
+			replace mrthel_debt_of_top_x_perc=mrthel_debt_of_top_x_perc[_n-1]+weighted_nominal_mrthel[_n] if _n==`j'
+
+			* Computes the nominal home secured debt
+			replace nom_mrthel_debt_of_top_x_perc=nom_mrthel_debt_of_top_x_perc[_n-1]+weighted_nominal_mrthel[_n] if _n==`j'	
+			
+			* This is used to compute the homeownership rate of the topc x perc of the wealth distribution
+			replace homeowner=homeowner[_n-1]+weighted_hhouses[_n] if _n==`j'
+
+			* Adds the densities
+			replace cum_dist=cum_dist[_n-1]+density[_n] if _n==`j'
+
+}
+
+		local x=cum_dist[`j']
+		local j=`j'+1
+
+}
+
+	local j=`j'-1
+
+	display "The top", x_perc[1,`count'], " net worth in total worth=", net_wealth_of_top_x_perc[`j']/tot_nominal_networth
+	* display "The top, x_perc[1,`count'], " wage income in total income=", wage_income_of_top_x_perc[`j']/tot_wage_income
+	display "The top", x_perc[1,`count'], " net principle residence worth in total worth=", net_house_wealth_of_top_x_perc[`j']/net_wealth_of_top_x_perc[`j']
+	display "The top", x_perc[1,`count'], " net principle residence worth=", net_house_wealth_of_top_x_perc[`j']
+	display "The top", x_perc[1,`count'], " home secured debt accounts for ", mrthel_debt_of_top_x_perc[`j']/(net_house_wealth_of_top_x_perc[`j']+mrthel_debt_of_top_x_perc[`j']), " of their house value for homeowners"
+	display "The top", x_perc[1,`count'], " have a total of home secured debt equal to ",  nom_mrthel_debt_of_top_x_perc[`j']
+	display "In the top", x_perc[1,`count'], " ", homeowner[`j']/cum_dist[`j'], " are homeowners"
+
+	drop cum_dist
+	drop net_wealth_of_top_x_perc
+	drop net_house_wealth_of_top_x_perc
+	drop homeowner
+		
+	local count=`count'+1
+
+}
+analyzing_wealth_distribution_in_us.txt
+Displaying analyzing_wealth_distribution_in_us.txt.
