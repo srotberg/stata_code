@@ -1,3 +1,10 @@
+*****This code uses the Survey of Consumer Finances data (SCF2013.dta, but it can be changed to any other year they have avaiable) 
+*****and returns data on homeownership rates, fraction of homeowners with a mortgage, total net worth in the economy, and total net
+*****worth of housing. As well, it computes the percentage of wealth held by the top matrix x_perc[1,1]=0.0001 
+*****(this represents the 0.01%, for example, but it can be change to any number up to 1). 
+*****It also displays this groups net principle residence worth in their total worth, their total net principle residence worth, 
+*****their mortgage size relative to the house value, and total home secured debt, and the fraction of this population who 
+*****are homeowners
 
 clear
 set mem 700m
@@ -183,5 +190,6 @@ while `count'<=1 {
 	local count=`count'+1
 
 }
+
 analyzing_wealth_distribution_in_us.txt
 Displaying analyzing_wealth_distribution_in_us.txt.
